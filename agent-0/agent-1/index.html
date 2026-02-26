@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Агент 1 — Анализ конкурентов</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #0f0f0f; --paper: #f8f5f0; --cream: #efe9df;
+      --gold: #c9a84c; --gold-light: #e8d5a3; --muted: #7a7268;
+      --border: #ddd5c8; --white: #ffffff; --danger: #c0392b; --success: #1a6b3c;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
+    .page { min-height: 100vh; display: flex; }
+
+    .left-panel {
+      width: 300px; flex-shrink: 0; background: var(--ink); color: var(--white);
+      padding: 40px 32px; display: flex; flex-direction: column;
+      position: sticky; top: 0; height: 100vh; overflow: hidden;
+    }
+    .logo { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--gold); margin-bottom: 8px; }
+    .agent-badge { display: inline-block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(201,168,76,0.4); padding: 3px 10px; border-radius: 20px; margin-bottom: 32px; }
+    .panel-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; line-height: 1.3; margin-bottom: 10px; }
+    .panel-subtitle { font-size: 12px; color: rgba(255,255,255,0.4); line-height: 1.6; }
+    .panel-spacer { flex: 1; }
+
+    .search-levels { margin-top: 32px; }
+    .search-level-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; opacity: 0.35; }
+    .search-level-item.active { opacity: 1; }
+    .search-level-item.done { opacity: 0.6; }
+    .level-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); flex-shrink: 0; margin-top: 5px; }
+    .search-level-item.active .level-dot { background: var(--gold); }
+    .search-level-item.done .level-dot { background: rgba(255,255,255,0.5); }
+    .level-label { font-size: 12px; color: rgba(255,255,255,0.6); }
+    .level-sublabel { font-size: 11px; color: rgba(255,255,255,0.3); }
+
+    .right-panel { flex: 1; padding: 56px 72px; max-width: 700px; overflow-y: auto; }
+
+    /* INPUT SCREEN */
+    .step-number { font-size: 11px; font-weight: 500; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+    .step-heading { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 600; line-height: 1.2; margin-bottom: 8px; }
+    .step-hint { font-size: 14px; color: var(--muted); margin-bottom: 40px; line-height: 1.6; }
+
+    .field-group { margin-bottom: 24px; }
+    .field-label { display: block; font-size: 12px; font-weight: 500; color: var(--ink); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
+    .field-label span { color: var(--gold); }
+    input[type="text"], textarea {
+      width: 100%; padding: 13px 16px; border: 1.5px solid var(--border); border-radius: 6px;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink);
+      background: var(--white); outline: none; transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.1); }
+    textarea { resize: vertical; line-height: 1.6; }
+    .input-error { border-color: var(--danger) !important; }
+    .error-msg { font-size: 11px; color: var(--danger); margin-top: 4px; }
+    .inline-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    /* SCOPE SELECTOR */
+    .scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .scope-btn {
+      padding: 14px 16px; border: 1.5px solid var(--border); border-radius: 8px;
+      background: var(--white); font-family: 'DM Sans', sans-serif; cursor: pointer;
+      transition: all 0.15s; text-align: left;
+    }
+    .scope-btn:hover { border-color: var(--gold-light); background: #fffdf7; }
+    .scope-btn.selected { border-color: var(--gold); background: #fffbee; }
+    .scope-icon { font-size: 20px; margin-bottom: 6px; display: block; }
+    .scope-title { font-size: 13px; font-weight: 500; color: var(--ink); display: block; }
+    .scope-sub { font-size: 11px; color: var(--muted); display: block; margin-top: 2px; }
+
+    /* LOADING */
+    .loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; text-align: center; }
+    .spinner-ring { width: 52px; height: 52px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.9s linear infinite; margin-bottom: 24px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-title { font-family: 'Playfair Display', serif; font-size: 26px; margin-bottom: 10px; }
+    .loading-steps { margin-top: 24px; text-align: left; max-width: 320px; }
+    .loading-step { display: flex; gap: 10px; align-items: center; padding: 8px 0; font-size: 13px; color: var(--muted); }
+    .loading-step.done { color: var(--success); }
+    .loading-step.active { color: var(--ink); font-weight: 500; }
+    .loading-step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+    .loading-step.done .loading-step-dot { background: var(--success); }
+    .loading-step.active .loading-step-dot { background: var(--gold); }
+
+    /* RESULTS */
+    .results-panel { max-width: 760px; }
+    .result-hero { background: var(--ink); color: var(--white); border-radius: 12px; padding: 32px 36px; margin-bottom: 28px; }
+    .result-hero-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+    .result-hero-title { font-family: 'Playfair Display', serif; font-size: 24px; margin-bottom: 10px; }
+    .result-hero-desc { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.7; }
+
+    .section-title { font-family: 'Playfair Display', serif; font-size: 20px; margin-bottom: 16px; color: var(--ink); }
+
+    /* COMPETITOR CARDS IN RESULTS */
+    .comp-result-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 12px; }
+    .comp-result-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 12px; }
+    .comp-num { width: 32px; height: 32px; border-radius: 50%; background: var(--cream); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: var(--muted); flex-shrink: 0; }
+    .comp-name { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+    .comp-type { font-size: 11px; color: var(--muted); }
+    .comp-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .comp-tag { font-size: 11px; padding: 3px 10px; border-radius: 20px; }
+    .tag-price { background: #e8f0fe; color: #1d4ed8; }
+    .tag-channel { background: var(--cream); color: var(--muted); }
+    .comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .comp-field { background: #fafaf8; border-radius: 6px; padding: 10px 12px; }
+    .comp-field-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 4px; }
+    .comp-field-value { font-size: 13px; color: var(--ink); line-height: 1.4; }
+    .comp-field-value.strength { color: var(--success); }
+    .comp-field-value.weakness { color: var(--danger); }
+
+    /* MAP */
+    .map-wrap { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 28px; }
+    .map-canvas { position: relative; width: 100%; height: 300px; background: #fafaf8; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-top: 16px; }
+    .map-axis-x { position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
+    .map-axis-y { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--border); }
+    .map-label { position: absolute; font-size: 10px; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; background: #fafaf8; padding: 2px 4px; }
+    .map-label.left { left: 6px; top: 50%; transform: translateY(-50%); }
+    .map-label.right { right: 6px; top: 50%; transform: translateY(-50%); }
+    .map-label.top { top: 6px; left: 50%; transform: translateX(-50%); }
+    .map-label.bottom { bottom: 6px; left: 50%; transform: translateX(-50%); }
+    .map-dot { position: absolute; transform: translate(-50%, -50%); cursor: pointer; }
+    .map-dot-circle { border-radius: 50%; border: 2px solid var(--white); box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: transform 0.2s; }
+    .map-dot:hover .map-dot-circle { transform: scale(1.3); }
+    .map-dot-label { position: absolute; white-space: nowrap; font-size: 11px; font-weight: 500; top: 18px; left: 50%; transform: translateX(-50%); background: var(--white); padding: 2px 6px; border-radius: 3px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); pointer-events: none; }
+    .map-dot.you .map-dot-circle { width: 18px; height: 18px; background: var(--gold); }
+    .map-dot.you .map-dot-label { color: #8a6800; font-weight: 700; }
+    .map-dot.comp .map-dot-circle { width: 12px; height: 12px; }
+
+    /* TABLE */
+    .table-wrap { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 28px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 500px; }
+    th { background: var(--ink); color: var(--white); padding: 11px 14px; text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+    td { padding: 11px 14px; border-bottom: 1px solid var(--cream); vertical-align: top; line-height: 1.4; }
+    tr:last-child td { border-bottom: none; }
+    tr.you-row td { background: #fffbee; }
+    tr.you-row td:first-child { font-weight: 600; color: #8a6800; }
+    .cell-tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 3px; }
+    .cell-green { background: #e8f5ee; color: var(--success); }
+    .cell-red { background: #fde8e6; color: var(--danger); }
+
+    /* NICHES */
+    .niche-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 10px; display: flex; gap: 14px; }
+    .niche-num { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--gold-light); width: 30px; flex-shrink: 0; }
+    .niche-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+    .niche-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    /* BENCHMARKS */
+    .bench-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 10px; display: flex; gap: 14px; align-items: flex-start; }
+    .bench-globe { font-size: 24px; flex-shrink: 0; }
+    .bench-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .bench-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    /* RECOMMENDATION */
+    .rec-box { background: var(--ink); color: var(--white); border-radius: 12px; padding: 32px 36px; margin-bottom: 24px; }
+    .rec-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+    .rec-title { font-family: 'Playfair Display', serif; font-size: 22px; margin-bottom: 12px; }
+    .rec-text { font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.7; }
+
+    /* NEXT STEP */
+    .next-step-card { background: linear-gradient(135deg, #fffbee, #fff8e1); border: 1px solid var(--gold-light); border-radius: 12px; padding: 28px 32px; margin-bottom: 16px; }
+    .next-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+    .next-title { font-family: 'Playfair Display', serif; font-size: 20px; margin-bottom: 8px; }
+    .next-desc { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+    .btn-next-step { font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: var(--ink); background: var(--gold); border: none; border-radius: 6px; padding: 13px 28px; cursor: pointer; transition: background 0.2s; }
+    .btn-next-step:hover { background: #b8952f; }
+
+    /* BUTTONS */
+    .btn-primary { font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: var(--ink); background: var(--gold); border: none; border-radius: 6px; padding: 14px 36px; cursor: pointer; transition: all 0.2s; }
+    .btn-primary:hover { background: #b8952f; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(201,168,76,0.3); }
+    .btn-outline { font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); background: none; border: 1.5px solid var(--border); border-radius: 6px; padding: 12px 24px; cursor: pointer; transition: all 0.2s; }
+    .btn-outline:hover { border-color: var(--ink); color: var(--ink); }
+
+    .error-box { background: #fde8e6; border: 1px solid #f5c6c2; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 14px; color: var(--danger); }
+
+    @media (max-width: 860px) {
+      .left-panel { display: none; }
+      .right-panel { padding: 32px 20px; max-width: 100%; }
+      .inline-fields, .scope-grid, .comp-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const SCOPE_OPTIONS = [
+  { val: 'city',  icon: '🏙️', title: 'Мой город',     sub: 'Локальные конкуренты рядом' },
+  { val: 'kz',    icon: '🇰🇿', title: 'Весь Казахстан', sub: 'Игроки по всей стране' },
+  { val: 'cis',   icon: '🌐', title: 'РК + СНГ',       sub: 'Казахстан, Россия, Узбекистан' },
+  { val: 'world', icon: '🌍', title: 'Мировые лидеры',  sub: 'Эталоны индустрии глобально' },
+];
+
+const COLORS = ['#2563eb','#dc2626','#16a34a','#9333ea','#ea580c','#0891b2','#be123c','#ca8a04'];
+
+// ─── ЗАГРУЗОЧНЫЙ ЭКРАН С ШАГАМИ ───────────────────────────────────────────────
+const LoadingScreen = ({ scope, niche, geo }) => {
+  const [activeStep, setActiveStep] = useState(0);
+  const scopeLabel = { city: geo || 'городе', kz: 'Казахстане', cis: 'РК и СНГ', world: 'мире' }[scope];
+
+  const steps = [
+    `Определяем нишу: ${niche}`,
+    `Ищем конкурентов в ${scopeLabel}`,
+    'Анализируем позиционирование и цены',
+    'Выявляем слабые места и возможности',
+    'Строим карту рынка',
+  ];
+
+  useEffect(() => {
+    let i = 0;
+    const iv = setInterval(() => { i++; if (i < steps.length) setActiveStep(i); else clearInterval(iv); }, 700);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <div className="loading-screen">
+      <div className="spinner-ring" />
+      <h2 className="loading-title">Ищем конкурентов…</h2>
+      <div className="loading-steps">
+        {steps.map((s, i) => (
+          <div key={i} className={`loading-step ${i < activeStep ? 'done' : i === activeStep ? 'active' : ''}`}>
+            <div className="loading-step-dot" />
+            {i < activeStep ? '✓ ' : ''}{s}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── КАРТА ПОЗИЦИОНИРОВАНИЯ ───────────────────────────────────────────────────
+const PositioningMap = ({ competitors, myBusiness }) => {
+  const getDot = (comp, i) => {
+    const priceMap = { low: 0.2, mid: 0.5, high: 0.8 };
+    const x = priceMap[comp.priceLevel] ?? (0.2 + (i * 0.15) % 0.6);
+    const y = 0.15 + (i * 0.13 + (comp.name.length % 5) * 0.07) % 0.65;
+    return { x, y };
+  };
+
+  return (
+    <div className="map-wrap">
+      <div className="section-title">Карта позиционирования</div>
+      <div style={{fontSize:'13px',color:'var(--muted)',marginBottom:'4px'}}>Цена vs воспринимаемая ценность. Золотая точка — вы.</div>
+      <div className="map-canvas">
+        <div className="map-axis-x" />
+        <div className="map-axis-y" />
+        <div className="map-label left">Дешевле</div>
+        <div className="map-label right">Дороже</div>
+        <div className="map-label top">Высокая ценность</div>
+        <div className="map-label bottom">Массовый рынок</div>
+
+        <div className="map-dot you" style={{left:'50%', top:'28%'}}>
+          <div className="map-dot-circle" style={{width:'18px',height:'18px',background:'var(--gold)'}} />
+          <div className="map-dot-label" style={{color:'#8a6800',fontWeight:700}}>{(myBusiness||'Вы').slice(0,14)}</div>
+        </div>
+
+        {competitors.map((c, i) => {
+          const { x, y } = getDot(c, i);
+          return (
+            <div key={i} className="map-dot comp" style={{left:`${x*100}%`, top:`${y*100}%`}}>
+              <div className="map-dot-circle" style={{width:'12px',height:'12px',background:COLORS[i%COLORS.length]}} />
+              <div className="map-dot-label">{(c.name||'').slice(0,12)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ─── ЭКРАН РЕЗУЛЬТАТОВ ────────────────────────────────────────────────────────
+const ResultsScreen = ({ data, form, onReset }) => {
+  const { overview, competitors, benchmarks, niches, recommendation } = data;
+
+  return (
+    <div className="results-panel">
+      <div className="step-number" style={{marginBottom:'8px'}}>АНАЛИЗ ЗАВЕРШЁН</div>
+      <h2 className="step-heading" style={{marginBottom:'8px'}}>Карта рынка готова</h2>
+      <p className="step-hint" style={{marginBottom:'32px'}}>Вот кто работает в вашей нише и где ваши возможности.</p>
+
+      <div className="result-hero">
+        <div className="result-hero-label">Обзор рынка</div>
+        <div className="result-hero-title">{form.niche}</div>
+        <div className="result-hero-desc">{overview}</div>
+      </div>
+
+      {competitors && competitors.length > 0 && (
+        <>
+          <PositioningMap competitors={competitors} myBusiness={form.myBusiness} />
+
+          <div style={{marginBottom:'28px'}}>
+            <div className="section-title">Конкуренты — детальный разбор</div>
+            {competitors.map((c, i) => (
+              <div key={i} className="comp-result-card">
+                <div className="comp-result-header">
+                  <div className="comp-num" style={{background: COLORS[i%COLORS.length]+'22', color: COLORS[i%COLORS.length]}}>{i+1}</div>
+                  <div>
+                    <div className="comp-name">{c.name}</div>
+                    <div className="comp-type">{c.type || ''}</div>
+                  </div>
+                </div>
+                <div className="comp-tags">
+                  {c.priceLabel && <span className="comp-tag tag-price">{c.priceLabel}</span>}
+                  {(c.channels||[]).map((ch,j) => <span key={j} className="comp-tag tag-channel">{ch}</span>)}
+                </div>
+                <div className="comp-grid">
+                  <div className="comp-field">
+                    <div className="comp-field-label">Преимущество</div>
+                    <div className="comp-field-value strength">{c.advantage || '—'}</div>
+                  </div>
+                  <div className="comp-field">
+                    <div className="comp-field-label">Слабость</div>
+                    <div className="comp-field-value weakness">{c.weakness || '—'}</div>
+                  </div>
+                  <div className="comp-field">
+                    <div className="comp-field-label">Целевая аудитория</div>
+                    <div className="comp-field-value">{c.audience || '—'}</div>
+                  </div>
+                  <div className="comp-field">
+                    <div className="comp-field-label">Позиционирование</div>
+                    <div className="comp-field-value">{c.positioning || '—'}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{marginBottom:'28px'}}>
+            <div className="section-title">Сравнительная таблица</div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Игрок</th>
+                    <th>Уровень цен</th>
+                    <th>Преимущество</th>
+                    <th>Слабость</th>
+                    <th>Каналы</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="you-row">
+                    <td>{form.myBusiness || 'Вы'} ★</td>
+                    <td>{form.myCheck || '—'}</td>
+                    <td><span className="cell-tag cell-green">Ваша позиция</span></td>
+                    <td>—</td>
+                    <td>—</td>
+                  </tr>
+                  {competitors.map((c,i) => (
+                    <tr key={i}>
+                      <td style={{fontWeight:500}}>{c.name}</td>
+                      <td>{c.priceLabel || '—'}</td>
+                      <td>{c.advantage ? <span className="cell-tag cell-green">{c.advantage.slice(0,35)}</span> : '—'}</td>
+                      <td>{c.weakness ? <span className="cell-tag cell-red">{c.weakness.slice(0,35)}</span> : '—'}</td>
+                      <td style={{color:'var(--muted)',fontSize:'11px'}}>{(c.channels||[]).slice(0,2).join(', ') || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {benchmarks && benchmarks.length > 0 && (
+        <div style={{marginBottom:'28px'}}>
+          <div className="section-title">Куда движется рынок</div>
+          {benchmarks.map((b,i) => (
+            <div key={i} className="bench-card">
+              <div className="bench-globe">🌐</div>
+              <div>
+                <div className="bench-name">{b.name} {b.country ? `(${b.country})` : ''}</div>
+                <div className="bench-desc">{b.description}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {niches && niches.length > 0 && (
+        <div style={{marginBottom:'28px'}}>
+          <div className="section-title">Незанятые ниши и возможности</div>
+          {niches.map((n,i) => (
+            <div key={i} className="niche-card">
+              <div className="niche-num">{i+1}</div>
+              <div>
+                <div className="niche-title">{n.title}</div>
+                <div className="niche-desc">{n.description}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="rec-box">
+        <div className="rec-label">Стратегическая рекомендация</div>
+        <div className="rec-title">Ваше место на рынке</div>
+        <div className="rec-text">{recommendation}</div>
+      </div>
+
+      <div className="next-step-card">
+        <div className="next-label">Следующий шаг</div>
+        <div className="next-title">Финансовый анализ — Агент 2</div>
+        <div className="next-desc">Конкурентная карта построена. Теперь посмотрим на ваши цифры — где точки роста выручки и что мешает масштабированию.</div>
+        <button className="btn-next-step" onClick={() => window.location.href='https://svetlanaantiaging-design.github.io/business-agents/agent-2/'}>Перейти к финансовому анализу →</button>
+      </div>
+
+      <button className="btn-outline" onClick={onReset}>← Начать заново</button>
+    </div>
+  );
+};
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+// ─── ШАБЛОННЫЙ ГЕНЕРАТОР КОНКУРЕНТОВ ─────────────────────────────────────────
+const buildCompetitorAnalysis = (form) => {
+  const niche = form.niche.toLowerCase();
+  const geo = form.geo || 'Казахстан';
+  const scope = form.scope;
+
+  // Определяем тип ниши
+  const isBeauty = /красот|маникюр|педикюр|салон|брови|ресниц|волос|барбер|стрижк/i.test(niche);
+  const isFood = /еда|доставк|ресторан|кафе|фаст|пицц|суши|бургер|шаурм/i.test(niche);
+  const isIT = /it|сайт|приложен|програм|разработ|диджитал|digital|smm|маркетинг/i.test(niche);
+  const isEducation = /обучен|курс|школ|репетитор|английск|язык|тренинг|коучинг/i.test(niche);
+  const isConstruction = /строит|ремонт|отделк|дизайн интерьер|недвижимост/i.test(niche);
+  const isFitness = /фитнес|спорт|тренажер|йога|танц|бокс|единоборств/i.test(niche);
+  const isRetail = /магазин|торговл|одежд|обувь|аксессуар|товар/i.test(niche);
+
+  // Базовые шаблоны по нише
+  const templates = {
+    beauty: {
+      overview: `Рынок бьюти-услуг в ${geo} высококонкурентный и продолжает расти. Основные игроки — частные мастера через Instagram и небольшие студии. Клиенты всё больше ценят сервис, уютную атмосферу и онлайн-запись, а не только цену.`,
+      competitors: [
+        { name: 'Частные мастера Instagram', type: 'Самозанятые специалисты', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Гибкий график, выезд на дом, личный контакт с клиентом', weakness: 'Нет стабильности, ограниченный спектр услуг', channels: ['Instagram', 'WhatsApp'], audience: 'Молодые женщины 18–30, экономные' },
+        { name: 'Сетевые студии (эконом)', type: 'Небольшие сети 3–5 точек', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Известность в районе, много мастеров, быстрая запись', weakness: 'Низкое качество сервиса, текучка персонала', channels: ['2GIS', 'Instagram', 'Сарафан'], audience: 'Женщины 25–45, ценящие доступность' },
+        { name: 'Премиум-студии в ТРЦ', type: 'Брендированные салоны', priceLevel: 'high', priceLabel: 'Премиум', advantage: 'Статусная локация, высокий сервис, профессиональная косметика', weakness: 'Высокая цена отпугивает массовый сегмент', channels: ['Instagram', '2GIS', 'Google'], audience: 'Женщины 28–45 с высоким доходом' },
+        { name: 'Барбершопы и мужские залы', type: 'Специализированные мужские салоны', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Чёткое позиционирование на мужскую аудиторию', weakness: 'Узкая специализация', channels: ['Instagram', '2GIS'], audience: 'Мужчины 20–40' },
+        { name: 'Студии обучения мастеров', type: 'Учебные центры + услуги', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Двойная монетизация — обучение и услуги', weakness: 'Фокус на обучении снижает качество клиентского сервиса', channels: ['Instagram', 'Telegram'], audience: 'Начинающие мастера и клиенты' },
+      ],
+    },
+    food: {
+      overview: `Рынок доставки еды в ${geo} — один из самых динамичных. После пандемии сформировалась устойчивая привычка заказывать онлайн. Конкуренция высокая, ключевые факторы — скорость, стабильность качества и удобство приложения.`,
+      competitors: [
+        { name: 'Агрегаторы (Wolt, Yandex Еда)', type: 'Маркетплейс доставки', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Огромная аудитория, готовая инфраструктура', weakness: 'Высокая комиссия с ресторанов, нет лояльности к бренду', channels: ['App Store', 'Google Play', 'Google'], audience: 'Все сегменты, 18–45' },
+        { name: 'Собственная доставка ресторанов', type: 'Рестораны с курьерами', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Контроль качества, прямой контакт с клиентом', weakness: 'Ограниченный охват, высокие расходы на логистику', channels: ['Instagram', 'WhatsApp', '2GIS'], audience: 'Постоянные клиенты ресторана' },
+        { name: 'Тёмные кухни (ghost kitchen)', type: 'Только доставка, без зала', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Низкая себестоимость, быстрый запуск', weakness: 'Нет физического присутствия, сложно строить доверие', channels: ['Агрегаторы', 'Instagram'], audience: 'Молодёжь, офисные работники' },
+        { name: 'Домашние повара (Instagram)', type: 'Самозанятые', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Домашняя еда, личный контакт, гибкость', weakness: 'Нет масштаба, нет стабильности', channels: ['Instagram', 'WhatsApp'], audience: 'Семьи, ценящие домашнюю еду' },
+        { name: 'Корпоративное питание', type: 'B2B доставка в офисы', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Крупные стабильные заказы', weakness: 'Узкий рынок, сезонность', channels: ['Прямые продажи', 'LinkedIn'], audience: 'Компании 20+ сотрудников' },
+      ],
+    },
+    it: {
+      overview: `IT-рынок ${geo} растёт на 15–20% ежегодно. Основная конкуренция — между фрилансерами, небольшими агентствами и крупными командами. Клиенты часто выбирают по портфолио и рекомендациям.`,
+      competitors: [
+        { name: 'Фрилансеры (Upwork, Kwork)', type: 'Частные специалисты', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Низкая цена, гибкость, быстрый старт', weakness: 'Нет ответственности, исчезают в процессе', channels: ['Upwork', 'Kwork', 'LinkedIn'], audience: 'Стартапы и малый бизнес с ограниченным бюджетом' },
+        { name: 'Небольшие веб-студии', type: 'Команды 5–15 человек', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Комплексный подход, есть договор и ответственность', weakness: 'Перегружены проектами, медленный отклик', channels: ['Google', 'Instagram', 'Сарафан'], audience: 'Малый и средний бизнес' },
+        { name: 'Крупные агентства', type: 'Команды 50+ человек', priceLevel: 'high', priceLabel: 'Премиум', advantage: 'Большой опыт, широкий стек технологий', weakness: 'Дорого, бюрократия, клиент теряется в процессах', channels: ['Google', 'LinkedIn', 'Конференции'], audience: 'Корпорации и крупный бизнес' },
+        { name: 'Аутсорс из Украины/Беларуси', type: 'Удалённые команды', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Высокая экспертиза по доступной цене', weakness: 'Временные зоны, языковой барьер', channels: ['Upwork', 'LinkedIn'], audience: 'Международные клиенты' },
+        { name: 'No-code платформы (Tilda, Wix)', type: 'Самостоятельные инструменты', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Быстро и дёшево для простых задач', weakness: 'Ограниченный функционал, нет уникальности', channels: ['Google', 'YouTube'], audience: 'Малый бизнес, самозанятые' },
+      ],
+    },
+    education: {
+      overview: `Рынок онлайн-образования в ${geo} активно растёт. После 2020 года аудитория привыкла учиться онлайн. Главные факторы выбора — результат, отзывы и личность преподавателя.`,
+      competitors: [
+        { name: 'Крупные EdTech платформы (Skillbox, Skyeng)', type: 'Онлайн-школы с брендом', priceLevel: 'high', priceLabel: 'Премиум', advantage: 'Бренд, рассрочка, сертификаты, большой выбор', weakness: 'Обезличенность, низкая доходимость курсов', channels: ['Google', 'YouTube', 'Таргет'], audience: 'Взрослые 25–40, инвестирующие в карьеру' },
+        { name: 'Частные репетиторы', type: 'Самозанятые преподаватели', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Индивидуальный подход, гибкость', weakness: 'Нет масштаба, зависит от одного человека', channels: ['Instagram', 'Сарафан', 'Preply'], audience: 'Школьники, взрослые для личных целей' },
+        { name: 'Языковые центры (оффлайн)', type: 'Классические языковые школы', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Живое общение, структура, дисциплина', weakness: 'Нет гибкости, привязка к расписанию', channels: ['2GIS', 'Сарафан', 'Instagram'], audience: 'Родители с детьми, корпоративные клиенты' },
+        { name: 'YouTube / бесплатный контент', type: 'Косвенный конкурент', priceLevel: 'low', priceLabel: 'Бесплатно', advantage: 'Доступность, огромная библиотека', weakness: 'Нет структуры, нет обратной связи', channels: ['YouTube'], audience: 'Самомотивированные learners' },
+        { name: 'Telegram-каналы с курсами', type: 'Инфобизнес', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Быстрый запуск, дешевле платформ', weakness: 'Низкое доверие, много некачественного контента', channels: ['Telegram', 'Instagram'], audience: 'Молодёжь 18–28' },
+      ],
+    },
+    construction: {
+      overview: `Строительный рынок ${geo} традиционно работает на рекомендациях. Клиенты крайне осторожны в выборе — боятся недобросовестных подрядчиков. Кто умеет выстраивать доверие — выигрывает.`,
+      competitors: [
+        { name: 'Частные бригады', type: 'Неформальные команды', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Дёшево, гибко, быстрый старт', weakness: 'Нет договора, непредсказуемый результат', channels: ['Сарафан', 'WhatsApp'], audience: 'Клиенты с ограниченным бюджетом' },
+        { name: 'Небольшие подрядчики', type: 'Компании 10–30 чел', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Есть договор, портфолио, опыт', weakness: 'Перегружены заказами, сроки срываются', channels: ['Instagram', '2GIS', 'Сарафан'], audience: 'Средний класс, квартиры и дома' },
+        { name: 'Крупные застройщики', type: 'Девелоперы', priceLevel: 'high', priceLabel: 'Премиум', advantage: 'Масштаб, финансовые гарантии', weakness: 'Недоступны для малых объектов', channels: ['Google', 'Outdoor', 'ТВ'], audience: 'Покупатели новостроек' },
+        { name: 'DIY (сделай сам)', type: 'Косвенный конкурент', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Экономия денег', weakness: 'Требует времени и навыков', channels: ['YouTube'], audience: 'Мужчины 30–50 с навыками' },
+        { name: 'Дизайн-студии с подрядом', type: 'Дизайн + строительство', priceLevel: 'high', priceLabel: 'Премиум', advantage: 'Комплексный подход от проекта до ремонта', weakness: 'Дорого, долго', channels: ['Instagram', 'Houzz'], audience: 'Состоятельные клиенты' },
+      ],
+    },
+    fitness: {
+      overview: `Фитнес-рынок ${geo} восстанавливается и трансформируется — онлайн-тренировки стали нормой, студии специализируются на конкретных направлениях. Клиент выбирает удобство локации и личность тренера.`,
+      competitors: [
+        { name: 'Крупные фитнес-сети', type: 'Сетевые клубы 1000+ м²', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Всё под одной крышей, известный бренд', weakness: 'Обезличенность, переполненность в час пик', channels: ['Instagram', 'Google', 'Outdoor'], audience: 'Все возрасты, массовый сегмент' },
+        { name: 'Мини-студии направлений', type: 'Йога, пилатес, бокс-студии', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Атмосфера, сообщество, экспертиза', weakness: 'Ограниченная аудитория', channels: ['Instagram', '2GIS'], audience: 'Женщины 25–40, осознанные' },
+        { name: 'Персональные тренеры', type: 'Самозанятые PT', priceLevel: 'high', priceLabel: 'Высокий', advantage: 'Индивидуальный подход, результат', weakness: 'Дорого, нет масштаба', channels: ['Instagram', 'Сарафан'], audience: 'Состоятельные, нацеленные на результат' },
+        { name: 'Онлайн-тренировки', type: 'Приложения и YouTube', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Доступность, гибкость', weakness: 'Нет мотивации, нет контроля', channels: ['YouTube', 'TikTok'], audience: 'Молодёжь, занятые люди' },
+        { name: 'Дворовые площадки и парки', type: 'Косвенный конкурент', priceLevel: 'low', priceLabel: 'Бесплатно', advantage: 'Бесплатно, удобно', weakness: 'Нет структуры, нет тренера', channels: ['—'], audience: 'Бюджетный сегмент' },
+      ],
+    },
+    default: {
+      overview: `Рынок "${form.niche}" в ${geo} находится в стадии активного развития. Конкуренция присутствует, но есть пространство для игроков с чётким позиционированием и качественным сервисом.`,
+      competitors: [
+        { name: 'Крупные игроки рынка', type: 'Established компании', priceLevel: 'high', priceLabel: 'Премиум', advantage: 'Бренд, большая клиентская база, ресурсы', weakness: 'Медленная реакция на изменения, бюрократия', channels: ['Google', 'Instagram', 'Outdoor'], audience: 'Корпоративные клиенты, средний+ сегмент' },
+        { name: 'Средние локальные компании', type: 'Местные игроки', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Знание рынка, личный сервис', weakness: 'Ограниченные ресурсы на маркетинг', channels: ['Instagram', '2GIS', 'Сарафан'], audience: 'Местная аудитория' },
+        { name: 'Частные специалисты', type: 'Самозанятые', priceLevel: 'low', priceLabel: 'Эконом', advantage: 'Низкая цена, гибкость', weakness: 'Нет стабильности и масштаба', channels: ['Instagram', 'WhatsApp'], audience: 'Бюджетный сегмент' },
+        { name: 'Онлайн-сервисы и агрегаторы', type: 'Digital-платформы', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Удобство, охват, автоматизация', weakness: 'Нет персонального подхода', channels: ['Google', 'App Store'], audience: 'Технологически активная аудитория' },
+        { name: 'Новые нишевые игроки', type: 'Стартапы и нишевые решения', priceLevel: 'mid', priceLabel: 'Средний', advantage: 'Свежий взгляд, гибкость, инновации', weakness: 'Нет опыта и базы клиентов', channels: ['TikTok', 'Instagram'], audience: 'Молодая аудитория, early adopters' },
+      ],
+    },
+  };
+
+  // Мировые эталоны по нишам
+  const worldBenchmarks = {
+    beauty: [
+      { name: 'Glossier', country: 'США', description: 'Построили бренд через сообщество и UGC. Тренд: клиент как амбассадор бренда.' },
+      { name: 'Treatwell', country: 'Европа', description: 'Маркетплейс бьюти-услуг с онлайн-записью. Тренд: агрегация и удобство бронирования.' },
+    ],
+    food: [
+      { name: 'Deliveroo', country: 'Великобритания', description: 'Пионер премиальной доставки из ресторанов. Тренд: скорость + качество вместо цены.' },
+      { name: 'Sweetgreen', country: 'США', description: 'Сеть здорового фастфуда с цифровой лояльностью. Тренд: здоровое питание + tech.' },
+    ],
+    it: [
+      { name: 'Toptal', country: 'США', description: 'Маркетплейс топ-3% разработчиков мира. Тренд: качество важнее скорости найма.' },
+      { name: 'Basecamp', country: 'США', description: 'Доказали что малая команда = лучший продукт. Тренд: фокус на результат, не на размер.' },
+    ],
+    education: [
+      { name: 'Duolingo', country: 'США', description: 'Геймификация обучения языкам. Тренд: привычка > мотивация.' },
+      { name: 'MasterClass', country: 'США', description: 'Обучение у звёзд. Тренд: личность преподавателя как продукт.' },
+    ],
+    construction: [
+      { name: 'Houzz', country: 'США', description: 'Платформа дизайна и ремонта с маркетплейсом подрядчиков. Тренд: визуализация до начала работ.' },
+      { name: 'Build.com', country: 'США', description: 'E-commerce строительных материалов. Тренд: прозрачность цен и онлайн-покупка.' },
+    ],
+    default: [
+      { name: 'Amazon', country: 'США', description: 'Стандарт клиентского сервиса и скорости. Тренд: клиент ожидает идеального опыта везде.' },
+      { name: 'Airbnb', country: 'США', description: 'Превратили доверие в продукт через отзывы. Тренд: репутация = конкурентное преимущество.' },
+    ],
+  };
+
+  // Незанятые ниши по масштабу
+  const nichesMap = {
+    city: [
+      { title: 'Гиперлокальное сообщество', description: `В ${geo} почти нет игроков которые строят настоящее сообщество вокруг ниши "${form.niche}". Первый кто это сделает — получит лояльную аудиторию надолго.` },
+      { title: 'Премиум с доступной ценой', description: 'Клиенты хотят премиальный сервис без премиальной цены. Этот разрыв в большинстве локальных ниш не закрыт.' },
+    ],
+    kz: [
+      { title: 'Стандартизация качества', description: `По всему Казахстану в нише "${form.niche}" нет единого стандарта качества. Кто первым введёт прозрачные стандарты и гарантии — занимает лидерство.` },
+      { title: 'Регионы за пределами Алматы', description: 'Большинство игроков сосредоточены в Алматы и Астане. Шымкент, Актобе, Атырау — недообслуженные рынки с реальным спросом.' },
+    ],
+    cis: [
+      { title: 'Казахстанская специфика', description: 'Российские и узбекские игроки не учитывают местную специфику. Локальный продукт с пониманием менталитета и языка — сильное преимущество.' },
+      { title: 'Трансграничный рынок', description: 'Между РК, Россией и Узбекистаном почти нет игроков работающих на всех трёх рынках одновременно. Это возможность для первопроходца.' },
+    ],
+    world: [
+      { title: 'Адаптация мировых практик', description: `Лучшие мировые практики в нише "${form.niche}" ещё не пришли в Казахстан. Кто адаптирует их первым — получит конкурентное преимущество на 2–3 года.` },
+      { title: 'Технологический разрыв', description: 'Местный рынок технологически отстаёт от мировых лидеров на 3–5 лет. Внедрение современных инструментов автоматизации и клиентского опыта даст резкое отличие.' },
+    ],
+  };
+
+  // Рекомендация
+  const recMap = {
+    city: `На локальном рынке ${geo} побеждает тот, кто лучше знает своего клиента. Сосредоточьтесь на одном районе или сегменте — станьте №1 там, и масштабируйтесь дальше.`,
+    kz: `Казахстанский рынок в нише "${form.niche}" ещё не консолидирован. У вас есть окно 1–2 года чтобы занять позицию лидера до прихода крупных игроков.`,
+    cis: `На рынке СНГ ваше конкурентное преимущество — локальность и понимание казахстанского клиента. Российские конкуренты не могут это скопировать.`,
+    world: `Мировые лидеры показывают куда движется индустрия. Ваша задача — не копировать, а адаптировать лучшее под реалии казахстанского рынка раньше конкурентов.`,
+  };
+
+  const key = isBeauty ? 'beauty' : isFood ? 'food' : isIT ? 'it' : isEducation ? 'education' : isConstruction ? 'construction' : isFitness ? 'fitness' : 'default';
+  const template = templates[key] || templates.default;
+  const benchmarks = scope === 'world' ? (worldBenchmarks[key] || worldBenchmarks.default) : [];
+  const niches = nichesMap[scope] || nichesMap.city;
+  const recommendation = recMap[scope] || recMap.city;
+
+  // Добавляем позиционирование к конкурентам
+  const positionings = ['Лидер по цене', 'Лидер по качеству', 'Специалист ниши', 'Удобство и скорость', 'Личный бренд'];
+  const competitors = template.competitors.map((c, i) => ({
+    ...c, positioning: positionings[i % positionings.length],
+  }));
+
+  return { overview: template.overview, competitors, benchmarks, niches, recommendation };
+};
+
+const App = () => {
+  // Читаем профиль из URL если пришли из Агента 0
+  const getProfileFromURL = () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get('profile');
+      if (raw) return JSON.parse(decodeURIComponent(raw));
+    } catch {}
+    return null;
+  };
+
+  const profile = getProfileFromURL();
+
+  const [screen, setScreen] = useState('input');
+  const [form, setForm] = useState({
+    myBusiness: profile?.productDescription?.slice(0, 40) || '',
+    niche: profile?.industryLabel || '',
+    geo: profile?.geography || '',
+    myCheck: profile?.avgCheck || '',
+    scope: '',
+  });
+  const [errors, setErrors] = useState({});
+  const [result, setResult] = useState(null);
+
+  const set = (f, v) => { setForm(p => ({...p, [f]: v})); if (errors[f]) setErrors(p => ({...p, [f]: null})); };
+
+  const validate = () => {
+    const e = {};
+    if (!form.myBusiness.trim()) e.myBusiness = 'Укажите название';
+    if (!form.niche.trim()) e.niche = 'Опишите нишу';
+    if (!form.scope) e.scope = 'Выберите масштаб поиска';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const run = () => {
+    if (!validate()) return;
+    setScreen('loading');
+    window.scrollTo(0, 0);
+    setTimeout(() => {
+      const r = buildCompetitorAnalysis(form);
+      setResult(r);
+      setScreen('results');
+    }, 2800);
+  };
+
+  const reset = () => { setScreen('input'); setResult(null); setForm({ myBusiness: '', niche: '', geo: '', myCheck: '', scope: '' }); window.scrollTo(0,0); };
+
+  const scopeLabel = { city: form.geo || 'город', kz: 'Казахстан', cis: 'РК + СНГ', world: 'Мир' }[form.scope] || '…';
+
+  return (
+    <div className="page">
+      <div className="left-panel">
+        <div className="logo">BusinessOS</div>
+        <div className="agent-badge">Агент 1</div>
+        <div className="panel-title">
+          {screen === 'input' && 'Анализ конкурентов'}
+          {screen === 'loading' && 'Ищем конкурентов…'}
+          {screen === 'results' && 'Карта рынка готова'}
+        </div>
+        <div className="panel-subtitle">
+          {screen === 'input' && 'Укажите нишу и масштаб — мы сами найдём конкурентов и построим карту рынка.'}
+          {screen === 'loading' && `Поиск: ${form.niche} · ${scopeLabel}`}
+          {screen === 'results' && 'Карта построена. Следующий шаг — Агент 2.'}        </div>
+
+        {screen === 'input' && (
+          <div className="search-levels" style={{marginTop:'auto'}}>
+            {SCOPE_OPTIONS.map(s => (
+              <div key={s.val} className={`search-level-item ${form.scope === s.val ? 'active' : form.scope ? 'done' : ''}`}>
+                <div className="level-dot" />
+                <div>
+                  <div className="level-label">{s.title}</div>
+                  <div className="level-sublabel">{s.sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="right-panel">
+        {screen === 'input' && (
+          <div>
+            <div className="step-number">Агент 1 — Конкуренты</div>
+            <h2 className="step-heading">Кто работает в вашей нише?</h2>
+            <p className="step-hint">Заполните поля — агент проанализирует рынок и покажет конкурентов, незанятые ниши и вашу стратегию.</p>
+
+            {profile && (
+              <div style={{background:'#fffbee',border:'1px solid var(--gold-light)',borderRadius:'8px',padding:'14px 18px',marginBottom:'24px',fontSize:'13px',color:'var(--muted)'}}>
+                ✓ Данные из квалификации подставлены — проверьте и уточните если нужно
+              </div>
+            )}
+
+            <div className="inline-fields">
+              <div className="field-group">
+                <label className="field-label">Ваш бизнес / продукт <span>*</span></label>
+                <input type="text" className={errors.myBusiness ? 'input-error' : ''} value={form.myBusiness} onChange={e => set('myBusiness', e.target.value)} placeholder="Например: Салон красоты Bloom" />
+                {errors.myBusiness && <div className="error-msg">{errors.myBusiness}</div>}
+              </div>
+              <div className="field-group">
+                <label className="field-label">Средний чек</label>
+                <input type="text" value={form.myCheck} onChange={e => set('myCheck', e.target.value)} placeholder="15 000 ₸" />
+              </div>
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">Ниша / сфера деятельности <span>*</span></label>
+              <input type="text" className={errors.niche ? 'input-error' : ''} value={form.niche} onChange={e => set('niche', e.target.value)} placeholder="Например: маникюр и педикюр, доставка еды, онлайн-курсы английского" />
+              {errors.niche && <div className="error-msg">{errors.niche}</div>}
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">Ваш город</label>
+              <input type="text" value={form.geo} onChange={e => set('geo', e.target.value)} placeholder="Алматы, Шымкент, Астана…" />
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">Масштаб анализа конкурентов <span>*</span></label>
+              <div className="scope-grid">
+                {SCOPE_OPTIONS.map(s => (
+                  <button key={s.val} className={`scope-btn ${form.scope === s.val ? 'selected' : ''}`} onClick={() => set('scope', s.val)}>
+                    <span className="scope-icon">{s.icon}</span>
+                    <span className="scope-title">{s.title}</span>
+                    <span className="scope-sub">{s.sub}</span>
+                  </button>
+                ))}
+              </div>
+              {errors.scope && <div className="error-msg" style={{marginTop:'8px'}}>{errors.scope}</div>}
+            </div>
+
+            <div style={{marginTop:'40px', paddingTop:'28px', borderTop:'1px solid var(--border)'}}>
+              <button className="btn-primary" onClick={run}>
+                Проанализировать рынок →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {screen === 'loading' && <LoadingScreen scope={form.scope} niche={form.niche} geo={form.geo} />}
+
+        {screen === 'results' && result && (
+          <ResultsScreen data={result} form={form} onReset={reset} />
+        )}
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+</body>
+</html>
