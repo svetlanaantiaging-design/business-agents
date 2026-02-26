@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Бизнес-квалификация</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #0f0f0f;
+      --paper: #f8f5f0;
+      --cream: #efe9df;
+      --gold: #c9a84c;
+      --gold-light: #e8d5a3;
+      --muted: #7a7268;
+      --border: #ddd5c8;
+      --white: #ffffff;
+      --danger: #c0392b;
+      --success: #1a6b3c;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* LEFT PANEL */
+    .left-panel {
+      width: 340px;
+      flex-shrink: 0;
+      background: var(--ink);
+      color: var(--white);
+      padding: 48px 40px;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--gold);
+      margin-bottom: 48px;
+    }
+
+    .panel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 16px;
+    }
+
+    .panel-subtitle {
+      font-size: 14px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.6;
+      margin-bottom: 48px;
+    }
+
+    .steps-nav {
+      flex: 1;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 12px 0;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      opacity: 0.4;
+    }
+
+    .step-item.active { opacity: 1; }
+    .step-item.done { opacity: 0.7; }
+
+    .step-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 500;
+      flex-shrink: 0;
+      margin-top: 2px;
+      transition: all 0.2s;
+    }
+
+    .step-item.active .step-dot {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--ink);
+    }
+
+    .step-item.done .step-dot {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.3);
+    }
+
+    .step-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--white);
+    }
+
+    .step-desc {
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 2px;
+    }
+
+    .progress-bar-wrap {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .progress-label {
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .progress-track {
+      height: 3px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--gold);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    /* RIGHT PANEL */
+    .right-panel {
+      flex: 1;
+      padding: 64px 80px;
+      max-width: 680px;
+    }
+
+    .step-number {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .step-heading {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 8px;
+      color: var(--ink);
+    }
+
+    .step-hint {
+      font-size: 15px;
+      color: var(--muted);
+      margin-bottom: 48px;
+      line-height: 1.6;
+    }
+
+    .field-group {
+      margin-bottom: 32px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .field-label span {
+      color: var(--gold);
+      margin-left: 2px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 14px 18px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      color: var(--ink);
+      background: var(--white);
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
+    }
+
+    textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+    .input-error {
+      border-color: var(--danger) !important;
+    }
+
+    .error-msg {
+      font-size: 12px;
+      color: var(--danger);
+      margin-top: 6px;
+    }
+
+    /* CHOICE BUTTONS */
+    .choice-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .choice-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+    .choice-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    .choice-btn {
+      padding: 14px 18px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      background: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--ink);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: left;
+      line-height: 1.4;
+    }
+
+    .choice-btn:hover {
+      border-color: var(--gold-light);
+      background: #fffdf7;
+    }
+
+    .choice-btn.selected {
+      border-color: var(--gold);
+      background: #fffbee;
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .choice-btn .choice-icon {
+      display: block;
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    .choice-btn .choice-title {
+      display: block;
+      font-weight: 500;
+    }
+
+    .choice-btn .choice-sub {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* INLINE FIELDS */
+    .inline-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* NAVIGATION */
+    .nav-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn-back {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color 0.2s;
+    }
+
+    .btn-back:hover { color: var(--ink); }
+    .btn-back:disabled { opacity: 0; pointer-events: none; }
+
+    .btn-next {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--ink);
+      background: var(--gold);
+      border: none;
+      border-radius: 6px;
+      padding: 14px 36px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-next:hover {
+      background: #b8952f;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(201,168,76,0.3);
+    }
+
+    /* ANALYSIS SCREEN */
+    .analysis-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 70vh;
+      text-align: center;
+    }
+
+    .spinner-ring {
+      width: 56px;
+      height: 56px;
+      border: 3px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin-bottom: 24px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .analysis-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+
+    .analysis-subtitle {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    /* RESULTS */
+    .result-hero {
+      background: var(--ink);
+      color: var(--white);
+      border-radius: 12px;
+      padding: 36px 40px;
+      margin-bottom: 28px;
+    }
+
+    .result-hero-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+
+    .result-hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      margin-bottom: 12px;
+    }
+
+    .result-hero-desc {
+      font-size: 14px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.7;
+    }
+
+    .result-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+
+    .result-card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: var(--ink);
+    }
+
+    .insight-item {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--cream);
+    }
+
+    .insight-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .insight-num {
+      width: 24px;
+      height: 24px;
+      background: var(--cream);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .insight-text { font-size: 14px; line-height: 1.6; color: var(--ink); }
+
+    .agent-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--cream);
+    }
+
+    .agent-item:last-child { border-bottom: none; }
+
+    .agent-rank {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--gold-light);
+      width: 32px;
+      flex-shrink: 0;
+    }
+
+    .agent-name { font-weight: 500; font-size: 14px; margin-bottom: 4px; }
+    .agent-reason { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+    .priority-badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 3px;
+      margin-left: 8px;
+    }
+
+    .priority-high { background: #fde8e6; color: #c0392b; }
+    .priority-mid  { background: #fef6e4; color: #9a6700; }
+    .priority-low  { background: #e8f5ee; color: #1a6b3c; }
+
+    .quick-win {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--cream);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .quick-win:last-child { border-bottom: none; }
+    .quick-win-check { color: var(--success); font-size: 16px; flex-shrink: 0; }
+
+    .recommendation-box {
+      background: linear-gradient(135deg, #fffbee 0%, #fff8e1 100%);
+      border: 1px solid var(--gold-light);
+      border-radius: 10px;
+      padding: 28px 32px;
+      margin-bottom: 28px;
+    }
+
+    .recommendation-box h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    .recommendation-box p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--ink);
+    }
+
+    .next-step-card {
+      background: var(--ink);
+      color: var(--white);
+      border-radius: 12px;
+      padding: 36px 40px;
+      margin-bottom: 16px;
+    }
+
+    .next-step-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 8px;
+    }
+
+    .next-step-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .next-step-desc {
+      font-size: 14px;
+      color: rgba(255,255,255,0.6);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .next-step-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .next-step-feature {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.75);
+    }
+
+    .btn-next-step {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--ink);
+      background: var(--gold);
+      border: none;
+      border-radius: 6px;
+      padding: 14px 32px;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+
+    .btn-next-step:hover {
+      background: #b8952f;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(201,168,76,0.35);
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+    }
+
+    .btn-outline {
+      flex: 1;
+      padding: 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      background: none;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--ink);
+    }
+
+    .btn-outline:hover { border-color: var(--ink); }
+
+    .btn-primary {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 6px;
+      background: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--white);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover { background: #2a2a2a; }
+
+    /* WELCOME SCREEN */
+    .welcome-screen {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      padding: 64px 80px;
+    }
+
+    .welcome-content { max-width: 520px; }
+
+    .welcome-tag {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      border: 1px solid var(--gold-light);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+
+    .welcome-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 48px;
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+
+    .welcome-desc {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 40px;
+    }
+
+    .welcome-points {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .welcome-point {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--ink);
+    }
+
+    .welcome-point-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--gold);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .btn-start {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--ink);
+      background: var(--gold);
+      border: none;
+      border-radius: 6px;
+      padding: 16px 48px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-start:hover {
+      background: #b8952f;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(201,168,76,0.3);
+    }
+
+    /* DIVIDER */
+    .field-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 28px 0;
+    }
+
+    /* CHAR COUNT */
+    .char-count {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 900px) {
+      .left-panel { display: none; }
+      .right-panel { padding: 40px 24px; max-width: 100%; }
+      .welcome-screen { padding: 40px 24px; }
+      .welcome-title { font-size: 34px; }
+      .choice-grid.cols-3 { grid-template-columns: 1fr 1fr; }
+      .inline-fields { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const STEPS = [
+      { id: 0, label: 'О вас',         desc: 'Имя, контакты, компания' },
+      { id: 1, label: 'Бизнес',        desc: 'Сфера, продукт, рынок' },
+      { id: 2, label: 'Клиенты',       desc: 'ЦА и ценностное предложение' },
+      { id: 3, label: 'Ситуация',      desc: 'Где вы сейчас' },
+      { id: 4, label: 'Цели',          desc: 'Куда хотите прийти' },
+    ];
+
+    const INDUSTRIES = [
+      { icon: '🏗️', title: 'Строительство и ремонт',  val: 'construction' },
+      { icon: '🛒', title: 'Торговля / Ритейл',        val: 'retail' },
+      { icon: '🍽️', title: 'HoReCa / Общепит',        val: 'horeca' },
+      { icon: '💻', title: 'IT / Диджитал',            val: 'it' },
+      { icon: '📚', title: 'Обучение / Консалтинг',    val: 'consulting' },
+      { icon: '⚕️', title: 'Медицина / Здоровье',     val: 'health' },
+      { icon: '🏠', title: 'Недвижимость',             val: 'realty' },
+      { icon: '⚙️', title: 'Производство',             val: 'manufacturing' },
+      { icon: '✂️', title: 'Услуги / Сервис',          val: 'services' },
+      { icon: '📦', title: 'Логистика / Доставка',     val: 'logistics' },
+      { icon: '💄', title: 'Красота / Мода',           val: 'beauty' },
+      { icon: '🔧', title: 'Другое',                   val: 'other' },
+    ];
+
+    const REVENUE_RANGES = [
+      { label: 'До 500 000 ₸',        val: 'lt500k' },
+      { label: '500 000 — 2 млн ₸',   val: '500k-2m' },
+      { label: '2 — 10 млн ₸',        val: '2m-10m' },
+      { label: '10 — 50 млн ₸',       val: '10m-50m' },
+      { label: 'Свыше 50 млн ₸',      val: 'gt50m' },
+    ];
+
+    const TEAM_SIZES = [
+      { label: 'Работаю один',   val: 'solo' },
+      { label: '2–5 человек',    val: '2-5' },
+      { label: '6–20 человек',   val: '6-20' },
+      { label: '20+ человек',    val: '20+' },
+    ];
+
+    const EXPERIENCE = [
+      { label: 'До 1 года',  val: 'lt1' },
+      { label: '1–3 года',   val: '1-3' },
+      { label: '3–7 лет',    val: '3-7' },
+      { label: '7+ лет',     val: '7+' },
+    ];
+
+    const GOALS_3M = [
+      { icon: '📈', title: 'Увеличить выручку',           val: 'revenue' },
+      { icon: '🎯', title: 'Найти новых клиентов',        val: 'clients' },
+      { icon: '⚙️', title: 'Выстроить процессы',         val: 'processes' },
+      { icon: '🚀', title: 'Запустить новый продукт',     val: 'product' },
+      { icon: '👥', title: 'Масштабировать команду',      val: 'team' },
+      { icon: '🌐', title: 'Выйти на новый рынок',        val: 'market' },
+    ];
+
+    const emptyForm = {
+      firstName: '', lastName: '', phone: '', email: '',
+      companyName: '', website: '',
+      industry: '', industryOther: '',
+      businessModel: '', productDescription: '',
+      teamSize: '', experience: '',
+      targetAudience: '', avgCheck: '', geography: '',
+      uniqueValue: '',
+      revenueRange: '', revenueGrowth: '',
+      mainChallenge: '', triedBefore: '',
+      goals: [], goalsDetail: '',
+      readyToInvest: '', timeline: '',
+    };
+
+    // ─── STEP COMPONENTS ─────────────────────────────────────────────────────
+
+    const Step1 = ({ form, set, errors }) => (
+      <div>
+        <div className="step-number">Шаг 01 / 05</div>
+        <h2 className="step-heading">Давайте познакомимся</h2>
+        <p className="step-hint">Расскажите о себе — это основа для персонального анализа вашего бизнеса.</p>
+
+        <div className="inline-fields">
+          <div className="field-group">
+            <label className="field-label">Имя <span>*</span></label>
+            <input type="text" className={errors.firstName ? 'input-error' : ''} value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="Алексей" />
+            {errors.firstName && <div className="error-msg">{errors.firstName}</div>}
+          </div>
+          <div className="field-group">
+            <label className="field-label">Фамилия <span>*</span></label>
+            <input type="text" className={errors.lastName ? 'input-error' : ''} value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="Иванов" />
+            {errors.lastName && <div className="error-msg">{errors.lastName}</div>}
+          </div>
+        </div>
+
+        <div className="inline-fields">
+          <div className="field-group">
+            <label className="field-label">Телефон <span>*</span></label>
+            <input type="tel" className={errors.phone ? 'input-error' : ''} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+7 700 000 00 00" />
+            {errors.phone && <div className="error-msg">{errors.phone}</div>}
+          </div>
+          <div className="field-group">
+            <label className="field-label">Email <span>*</span></label>
+            <input type="email" className={errors.email ? 'input-error' : ''} value={form.email} onChange={e => set('email', e.target.value)} placeholder="name@company.kz" />
+            {errors.email && <div className="error-msg">{errors.email}</div>}
+          </div>
+        </div>
+
+        <div className="inline-fields">
+          <div className="field-group">
+            <label className="field-label">Название компании</label>
+            <input type="text" value={form.companyName} onChange={e => set('companyName', e.target.value)} placeholder="ТОО Пример" />
+          </div>
+          <div className="field-group">
+            <label className="field-label">Сайт / Instagram</label>
+            <input type="text" value={form.website} onChange={e => set('website', e.target.value)} placeholder="example.kz или @example" />
+          </div>
+        </div>
+      </div>
+    );
+
+    const Step2 = ({ form, set, errors }) => (
+      <div>
+        <div className="step-number">Шаг 02 / 05</div>
+        <h2 className="step-heading">Ваш бизнес</h2>
+        <p className="step-hint">Несколько вопросов о том, чем вы занимаетесь.</p>
+
+        <div className="field-group">
+          <label className="field-label">Сфера деятельности <span>*</span></label>
+          <div className="choice-grid cols-3" style={{gridTemplateColumns:'1fr 1fr 1fr'}}>
+            {INDUSTRIES.map(ind => (
+              <button key={ind.val} className={`choice-btn ${form.industry === ind.val ? 'selected' : ''}`}
+                onClick={() => set('industry', ind.val)}>
+                <span className="choice-icon">{ind.icon}</span>
+                <span className="choice-title" style={{fontSize:'13px'}}>{ind.title}</span>
+              </button>
+            ))}
+          </div>
+          {errors.industry && <div className="error-msg">{errors.industry}</div>}
+          {form.industry === 'other' && (
+            <input type="text" style={{marginTop:'12px'}} value={form.industryOther}
+              onChange={e => set('industryOther', e.target.value)} placeholder="Укажите вашу сферу" />
+          )}
+        </div>
+
+        <div className="field-group">
+          <label className="field-label">Модель бизнеса <span>*</span></label>
+          <div className="choice-grid cols-3">
+            {[
+              { icon: '🤝', title: 'B2B', sub: 'Продаю компаниям' },
+              { icon: '👤', title: 'B2C', sub: 'Продаю людям' },
+              { icon: '🔄', title: 'B2B + B2C', sub: 'Оба сегмента' },
+            ].map(m => (
+              <button key={m.title} className={`choice-btn ${form.businessModel === m.title ? 'selected' : ''}`}
+                onClick={() => set('businessModel', m.title)}>
+                <span className="choice-icon">{m.icon}</span>
+                <span className="choice-title">{m.title}</span>
+                <span className="choice-sub">{m.sub}</span>
+              </button>
+            ))}
+          </div>
+          {errors.businessModel && <div className="error-msg">{errors.businessModel}</div>}
+        </div>
+
+        <div className="field-group">
+          <label className="field-label">Опишите ваш продукт или услугу <span>*</span></label>
+          <textarea className={errors.productDescription ? 'input-error' : ''} value={form.productDescription}
+            onChange={e => set('productDescription', e.target.value)} maxLength={250}
+            placeholder="Что именно вы продаёте? Один абзац, своими словами." rows={3} />
+          <div className="char-count">{form.productDescription.length} / 250</div>
+          {errors.productDescription && <div className="error-msg">{errors.productDescription}</div>}
+        </div>
+
+        <div className="inline-fields">
+          <div className="field-group">
+            <label className="field-label">Размер команды <span>*</span></label>
+            <div className="choice-grid" style={{gridTemplateColumns:'1fr 1fr'}}>
+              {TEAM_SIZES.map(t => (
+                <button key={t.val} className={`choice-btn ${form.teamSize === t.val ? 'selected' : ''}`}
+                  onClick={() => set('teamSize', t.val)} style={{fontSize:'13px',padding:'11px 14px'}}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {errors.teamSize && <div className="error-msg">{errors.teamSize}</div>}
+          </div>
+          <div className="field-group">
+            <label className="field-label">Опыт в бизнесе <span>*</span></label>
+            <div className="choice-grid" style={{gridTemplateColumns:'1fr 1fr'}}>
+              {EXPERIENCE.map(e => (
+                <button key={e.val} className={`choice-btn ${form.experience === e.val ? 'selected' : ''}`}
+                  onClick={() => set('experience', e.val)} style={{fontSize:'13px',padding:'11px 14px'}}>
+                  {e.label}
+                </button>
+              ))}
+            </div>
+            {errors.experience && <div className="error-msg">{errors.experience}</div>}
+          </div>
+        </div>
+      </div>
+    );
+
+    const Step3 = ({ form, set, errors }) => (
+      <div>
+        <div className="step-number">Шаг 03 / 05</div>
+        <h2 className="step-heading">Ваши клиенты</h2>
+        <p className="step-hint">Понимание ЦА — фундамент для всех стратегических решений.</p>
+
+        <div className="field-group">
+          <label className="field-label">Кто ваш идеальный клиент? <span>*</span></label>
+          <textarea className={errors.targetAudience ? 'input-error' : ''} value={form.targetAudience}
+            onChange={e => set('targetAudience', e.target.value)} maxLength={300}
+            placeholder="Опишите: кто этот человек или компания, какие у него задачи и боли, почему они приходят к вам?" rows={4} />
+          <div className="char-count">{form.targetAudience.length} / 300</div>
+          {errors.targetAudience && <div className="error-msg">{errors.targetAudience}</div>}
+        </div>
+
+        <div className="inline-fields">
+          <div className="field-group">
+            <label className="field-label">Средний чек <span>*</span></label>
+            <input type="text" className={errors.avgCheck ? 'input-error' : ''} value={form.avgCheck}
+              onChange={e => set('avgCheck', e.target.value)} placeholder="150 000 ₸" />
+            {errors.avgCheck && <div className="error-msg">{errors.avgCheck}</div>}
+          </div>
+          <div className="field-group">
+            <label className="field-label">География работы <span>*</span></label>
+            <input type="text" className={errors.geography ? 'input-error' : ''} value={form.geography}
+              onChange={e => set('geography', e.target.value)} placeholder="Алматы, онлайн по СНГ..." />
+            {errors.geography && <div className="error-msg">{errors.geography}</div>}
+          </div>
+        </div>
+
+        <div className="field-group">
+          <label className="field-label">Почему клиенты выбирают вас, а не конкурентов?</label>
+          <textarea value={form.uniqueValue}
+            onChange={e => set('uniqueValue', e.target.value)} maxLength={250}
+            placeholder="Если не уверены — напишите своё предположение. Это важный вопрос." rows={3} />
+          <div className="char-count">{form.uniqueValue.length} / 250</div>
+        </div>
+      </div>
+    );
+
+    const Step4 = ({ form, set, errors }) => (
+      <div>
+        <div className="step-number">Шаг 04 / 05</div>
+        <h2 className="step-heading">Текущая ситуация</h2>
+        <p className="step-hint">Честный ответ здесь — основа правильных рекомендаций.</p>
+
+        <div className="field-group">
+          <label className="field-label">Ежемесячная выручка <span>*</span></label>
+          <div className="choice-grid" style={{gridTemplateColumns:'1fr 1fr'}}>
+            {REVENUE_RANGES.map(r => (
+              <button key={r.val} className={`choice-btn ${form.revenueRange === r.val ? 'selected' : ''}`}
+                onClick={() => set('revenueRange', r.val)} style={{fontSize:'13px',padding:'12px 16px'}}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+          {errors.revenueRange && <div className="error-msg">{errors.revenueRange}</div>}
+        </div>
+
+        <div className="field-group">
+          <label className="field-label">Динамика за последние 3 месяца <span>*</span></label>
+          <div className="choice-grid cols-3">
+            {[
+              { icon: '📈', title: 'Растём',         sub: 'Есть положительная динамика', val: 'growing' },
+              { icon: '➡️', title: 'Стагнация',      sub: 'Держимся на одном уровне',    val: 'flat' },
+              { icon: '📉', title: 'Снижение',       sub: 'Выручка падает',               val: 'declining' },
+            ].map(g => (
+              <button key={g.val} className={`choice-btn ${form.revenueGrowth === g.val ? 'selected' : ''}`}
+                onClick={() => set('revenueGrowth', g.val)}>
+                <span className="choice-icon">{g.icon}</span>
+                <span className="choice-title">{g.title}</span>
+                <span className="choice-sub">{g.sub}</span>
+              </button>
+            ))}
+          </div>
+          {errors.revenueGrowth && <div className="error-msg">{errors.revenueGrowth}</div>}
+        </div>
+
+        <div className="field-group">
+          <label className="field-label">Главная проблема, с которой вы пришли <span>*</span></label>
+          <textarea className={errors.mainChallenge ? 'input-error' : ''} value={form.mainChallenge}
+            onChange={e => set('mainChallenge', e.target.value)} maxLength={300}
+            placeholder="Опишите конкретно: что не работает, что мешает расти, где теряете деньги или время?" rows={4} />
+          <div className="char-count">{form.mainChallenge.length} / 300</div>
+          {errors.mainChallenge && <div className="error-msg">{errors.mainChallenge}</div>}
+        </div>
+
+        <div className="field-group">
+          <label className="field-label">Что уже пробовали решить эту проблему?</label>
+          <textarea value={form.triedBefore}
+            onChange={e => set('triedBefore', e.target.value)} maxLength={250}
+            placeholder="Консультанты, курсы, найм людей, изменение процессов — что было и почему не сработало?" rows={3} />
+          <div className="char-count">{form.triedBefore.length} / 250</div>
+        </div>
+      </div>
+    );
+
+    const Step5 = ({ form, set, errors }) => {
+      const toggleGoal = (val) => {
+        const curr = form.goals || [];
+        set('goals', curr.includes(val) ? curr.filter(g => g !== val) : [...curr, val]);
+      };
+
+      return (
+        <div>
+          <div className="step-number">Шаг 05 / 05</div>
+          <h2 className="step-heading">Ваши цели</h2>
+          <p className="step-hint">Что важно достичь в ближайшие 3 месяца?</p>
+
+          <div className="field-group">
+            <label className="field-label">Приоритетные направления <span>*</span></label>
+            <div className="choice-grid cols-3">
+              {GOALS_3M.map(g => (
+                <button key={g.val} className={`choice-btn ${(form.goals||[]).includes(g.val) ? 'selected' : ''}`}
+                  onClick={() => toggleGoal(g.val)}>
+                  <span className="choice-icon">{g.icon}</span>
+                  <span className="choice-title">{g.title}</span>
+                </button>
+              ))}
+            </div>
+            {errors.goals && <div className="error-msg">{errors.goals}</div>}
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">Опишите желаемый результат</label>
+            <textarea value={form.goalsDetail}
+              onChange={e => set('goalsDetail', e.target.value)} maxLength={250}
+              placeholder="Например: хочу выйти на 5 млн ₸ в месяц и сократить личное участие в операционке до 4 часов в день" rows={3} />
+            <div className="char-count">{form.goalsDetail.length} / 250</div>
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">Готовы ли вы инвестировать в изменения? <span>*</span></label>
+            <div className="choice-grid cols-3">
+              {[
+                { icon: '✅', title: 'Да',            sub: 'Готов вкладывать время и ресурсы', val: 'yes' },
+                { icon: '🤔', title: 'Частично',      sub: 'Зависит от конкретных шагов',      val: 'partial' },
+                { icon: '⏳', title: 'Пока нет',      sub: 'Хочу сначала понять план',         val: 'not_yet' },
+              ].map(r => (
+                <button key={r.val} className={`choice-btn ${form.readyToInvest === r.val ? 'selected' : ''}`}
+                  onClick={() => set('readyToInvest', r.val)}>
+                  <span className="choice-icon">{r.icon}</span>
+                  <span className="choice-title">{r.title}</span>
+                  <span className="choice-sub">{r.sub}</span>
+                </button>
+              ))}
+            </div>
+            {errors.readyToInvest && <div className="error-msg">{errors.readyToInvest}</div>}
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">Когда ожидаете первые результаты? <span>*</span></label>
+            <div className="choice-grid" style={{gridTemplateColumns:'1fr 1fr'}}>
+              {[
+                { label: 'Через 2–4 недели',   val: 'weeks' },
+                { label: 'Через 1–2 месяца',   val: '1-2months' },
+                { label: 'Через 3 месяца',     val: '3months' },
+                { label: 'Готов к долгосрочной работе', val: 'longterm' },
+              ].map(t => (
+                <button key={t.val} className={`choice-btn ${form.timeline === t.val ? 'selected' : ''}`}
+                  onClick={() => set('timeline', t.val)} style={{fontSize:'13px',padding:'12px 16px'}}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {errors.timeline && <div className="error-msg">{errors.timeline}</div>}
+          </div>
+        </div>
+      );
+    };
+
+    // ─── ANALYSIS SCREEN ─────────────────────────────────────────────────────
+
+    const AnalysisScreen = ({ form, isLoading, result }) => {
+      const priorityClass = (p) =>
+        p === 'высокий' ? 'priority-high' : p === 'средний' ? 'priority-mid' : 'priority-low';
+
+      if (isLoading) return (
+        <div className="right-panel">
+          <div className="analysis-loading">
+            <div className="spinner-ring"></div>
+            <h2 className="analysis-title">Анализируем ваш профиль</h2>
+            <p className="analysis-subtitle">ИИ-агент изучает данные. Займёт 10–20 секунд.</p>
+          </div>
+        </div>
+      );
+
+      if (result?.error) return (
+        <div className="right-panel">
+          <div className="analysis-loading">
+            <div style={{fontSize:'48px',marginBottom:'16px'}}>⚠️</div>
+            <h2 className="analysis-title">Ошибка анализа</h2>
+            <p className="analysis-subtitle">Не удалось получить ответ. Проверьте соединение.</p>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="right-panel" style={{maxWidth:'720px'}}>
+          <div className="step-number" style={{marginBottom:'8px'}}>АНАЛИЗ ЗАВЕРШЁН</div>
+          <h2 className="step-heading" style={{marginBottom:'8px'}}>Добро пожаловать, {form.firstName}</h2>
+          <p className="step-hint">Ваш персональный бизнес-анализ готов.</p>
+
+          <div className="result-hero">
+            <div className="result-hero-label">Ваш сегмент</div>
+            <div className="result-hero-title">{result?.segment}</div>
+            <div className="result-hero-desc">{result?.segmentDescription}</div>
+          </div>
+
+          <div className="result-card">
+            <div className="result-card-title">Ключевые наблюдения</div>
+            {result?.keyInsights?.map((ins, i) => (
+              <div className="insight-item" key={i}>
+                <div className="insight-num">{i + 1}</div>
+                <div className="insight-text">{ins}</div>
+              </div>
+            ))}
+          </div>
+
+          {result?.redFlags?.length > 0 && (
+            <div className="result-card" style={{borderColor:'#f5c6c2'}}>
+              <div className="result-card-title">⚠️ На что обратить внимание</div>
+              {result.redFlags.map((f, i) => (
+                <div className="insight-item" key={i}>
+                  <div className="insight-num" style={{background:'#fde8e6',color:'#c0392b'}}>!</div>
+                  <div className="insight-text">{f}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="result-card">
+            <div className="result-card-title">⚡ На чём сосредоточиться прямо сейчас</div>
+            {result?.quickWins?.map((w, i) => (
+              <div className="quick-win" key={i}>
+                <span className="quick-win-check">✓</span>
+                <span>{w}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="recommendation-box">
+            <h3>Главная рекомендация</h3>
+            <p>{result?.mainRecommendation}</p>
+          </div>
+
+          <div className="next-step-card">
+            <div className="next-step-label">Следующий шаг</div>
+            <div className="next-step-title">Анализ конкурентов</div>
+            <div className="next-step-desc">
+              Теперь, когда мы понимаем ваш бизнес — самое время посмотреть на рынок. 
+              Агент проанализирует конкурентов в вашей нише: их сильные стороны, слабые места и возможности для вашего роста.
+            </div>
+            <div className="next-step-features">
+              <div className="next-step-feature"><span>🔍</span> Кто ваши реальные конкуренты</div>
+              <div className="next-step-feature"><span>📊</span> Их позиционирование и офферы</div>
+              <div className="next-step-feature"><span>🎯</span> Где ваши точки отличия</div>
+              <div className="next-step-feature"><span>🚀</span> Незанятые ниши в вашей сфере</div>
+            </div>
+            <button className="btn-next-step" onClick={() => {
+              const industryLabel = INDUSTRIES.find(i => i.val === form.industry)?.title || form.industry;
+              const profileData = {
+                firstName: form.firstName, lastName: form.lastName,
+                industry: form.industry, industryLabel,
+                businessModel: form.businessModel, geography: form.geography,
+                avgCheck: form.avgCheck, productDescription: form.productDescription,
+                targetAudience: form.targetAudience,
+              };
+              const encoded = encodeURIComponent(JSON.stringify(profileData));
+              window.location.href = 'https://svetlanaantiaging-design.github.io/business-agents/agent-1/?profile=' + encoded;
+            }}>Перейти к анализу конкурентов →</button>
+          </div>
+
+          <div style={{marginTop:'16px'}}>
+            <button className="btn-outline" onClick={() => window.location.reload()}>
+              ← Заполнить анкету заново
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── WELCOME SCREEN ───────────────────────────────────────────────────────
+
+    const WelcomeScreen = ({ onStart }) => (
+      <div className="welcome-screen">
+        <div className="welcome-content">
+          <div className="welcome-tag">Бизнес-диагностика</div>
+          <h1 className="welcome-title">Ваш бизнес заслуживает честного анализа</h1>
+          <p className="welcome-desc">
+            5 шагов — и ИИ-агент подготовит персональную стратегию роста на основе реальных данных о вашем бизнесе.
+          </p>
+          <div className="welcome-points">
+            {[
+              '5 минут на заполнение',
+              'Персональный анализ вашего сегмента',
+              'Конкретные шаги на ближайшую неделю',
+              'Данные передаются специализированным агентам',
+            ].map((p, i) => (
+              <div className="welcome-point" key={i}>
+                <div className="welcome-point-dot" />
+                {p}
+              </div>
+            ))}
+          </div>
+          <button className="btn-start" onClick={onStart}>Начать диагностику →</button>
+        </div>
+      </div>
+    );
+
+    // ─── MAIN APP ─────────────────────────────────────────────────────────────
+
+    const App = () => {
+      const [screen, setScreen] = useState('welcome'); // welcome | form | analysis
+      const [step, setStep] = useState(0);
+      const [form, setForm] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('qual-v2')) || emptyForm; } catch { return emptyForm; }
+      });
+      const [errors, setErrors] = useState({});
+      const [isLoading, setIsLoading] = useState(false);
+      const [result, setResult] = useState(null);
+
+      useEffect(() => {
+        localStorage.setItem('qual-v2', JSON.stringify(form));
+      }, [form]);
+
+      const set = (field, val) => {
+        setForm(p => ({ ...p, [field]: val }));
+        if (errors[field]) setErrors(p => ({ ...p, [field]: null }));
+      };
+
+      const validate = (s) => {
+        const e = {};
+        if (s === 0) {
+          if (!form.firstName.trim()) e.firstName = 'Обязательное поле';
+          if (!form.lastName.trim())  e.lastName  = 'Обязательное поле';
+          if (!form.phone.trim())     e.phone     = 'Укажите телефон';
+          if (!form.email.trim() || !form.email.includes('@')) e.email = 'Введите корректный email';
+        }
+        if (s === 1) {
+          if (!form.industry)          e.industry          = 'Выберите сферу';
+          if (!form.businessModel)     e.businessModel     = 'Выберите модель';
+          if (!form.productDescription.trim() || form.productDescription.length < 20)
+            e.productDescription = 'Опишите продукт (минимум 20 символов)';
+          if (!form.teamSize)   e.teamSize   = 'Выберите размер команды';
+          if (!form.experience) e.experience = 'Выберите опыт';
+        }
+        if (s === 2) {
+          if (!form.targetAudience.trim() || form.targetAudience.length < 20)
+            e.targetAudience = 'Опишите вашу ЦА подробнее';
+          if (!form.avgCheck.trim()) e.avgCheck  = 'Укажите средний чек';
+          if (!form.geography.trim()) e.geography = 'Укажите географию';
+        }
+        if (s === 3) {
+          if (!form.revenueRange)  e.revenueRange  = 'Выберите диапазон';
+          if (!form.revenueGrowth) e.revenueGrowth = 'Выберите динамику';
+          if (!form.mainChallenge.trim() || form.mainChallenge.length < 20)
+            e.mainChallenge = 'Опишите проблему подробнее';
+        }
+        if (s === 4) {
+          if (!form.goals || form.goals.length === 0) e.goals = 'Выберите хотя бы одну цель';
+          if (!form.readyToInvest) e.readyToInvest = 'Ответьте на вопрос';
+          if (!form.timeline)      e.timeline      = 'Выберите срок';
+        }
+        setErrors(e);
+        return Object.keys(e).length === 0;
+      };
+
+      const next = () => {
+        if (!validate(step)) return;
+        if (step < STEPS.length - 1) { setStep(step + 1); window.scrollTo(0, 0); }
+        else submit();
+      };
+
+      const buildTemplateResult = (form) => {
+        const industryLabel = INDUSTRIES.find(i => i.val === form.industry)?.title || form.industry;
+        const goalsLabels = (form.goals || []).map(g => GOALS_3M.find(x => x.val === g)?.title || g);
+
+        // Сегмент по сфере + модели
+        const segmentMap = {
+          construction: 'Строительный подрядчик',
+          retail: 'Розничная торговля',
+          horeca: 'Ресторанный бизнес',
+          it: 'IT-компания',
+          consulting: 'Консалтинг и обучение',
+          health: 'Медицинский бизнес',
+          realty: 'Риэлторский бизнес',
+          manufacturing: 'Производственное предприятие',
+          services: 'Сервисный бизнес',
+          logistics: 'Логистика и доставка',
+          beauty: 'Индустрия красоты',
+          other: 'Предприниматель',
+        };
+        const segment = segmentMap[form.industry] || 'Малый бизнес';
+
+        const teamLabel = { solo: 'соло', '2-5': '2–5 человек', '6-20': '6–20 человек', '20+': '20+ человек' }[form.teamSize] || form.teamSize;
+        const expLabel = { lt1: 'менее года', '1-3': '1–3 года', '3-7': '3–7 лет', '7+': '7+ лет' }[form.experience] || form.experience;
+        const revenueLabel = {
+          lt500k: 'до 500 000 ₸',
+          '500k-2m': '500 000 — 2 млн ₸',
+          '2m-10m': '2 — 10 млн ₸',
+          '10m-50m': '10 — 50 млн ₸',
+          gt50m: 'свыше 50 млн ₸',
+        }[form.revenueRange] || form.revenueRange;
+
+        const growthMap = { growing: 'растёт', flat: 'в стагнации', declining: 'снижается' };
+        const growthLabel = growthMap[form.revenueGrowth] || form.revenueGrowth;
+
+        // Ключевые инсайты
+        const insights = [];
+        insights.push(`Ваш бизнес в сфере "${industryLabel}" с моделью ${form.businessModel} и командой ${teamLabel} — это ${form.experience === 'lt1' || form.experience === '1-3' ? 'молодой, но перспективный' : 'зрелый'} проект с потенциалом для системного роста.`);
+
+        if (form.revenueGrowth === 'growing') {
+          insights.push(`Положительная динамика выручки говорит о том, что рынок принимает ваш продукт. Сейчас важно не потерять темп и выстроить процессы, которые удержат рост без постоянного ручного управления.`);
+        } else if (form.revenueGrowth === 'flat') {
+          insights.push(`Стагнация выручки при выручке ${revenueLabel} — классический сигнал "потолка". Скорее всего, текущие каналы привлечения исчерпаны и нужна либо новая аудитория, либо новый оффер.`);
+        } else {
+          insights.push(`Снижение выручки требует немедленной диагностики: важно понять, это рыночный тренд или внутренняя проблема. До масштабирования — сначала стабилизация.`);
+        }
+
+        if (form.avgCheck) {
+          insights.push(`Средний чек ${form.avgCheck} при географии "${form.geography}" даёт понимание ёмкости рынка. ${form.businessModel === 'B2B' ? 'В B2B стоит работать над увеличением LTV и долгосрочными контрактами.' : 'В B2C главный рычаг — повторные продажи и реферальная программа.'}`);
+        }
+
+        // Red flags
+        const redFlags = [];
+        if (form.revenueGrowth === 'declining') redFlags.push('Падение выручки — приоритет №1. Нужен срочный аудит воронки продаж до запуска любых других изменений.');
+        if (form.teamSize === 'solo') redFlags.push('Работа соло создаёт риск операционного выгорания. Делегирование хотя бы одной функции — критически важный шаг.');
+        if (!form.uniqueValue || form.uniqueValue.trim().length < 20) redFlags.push('Ценностное предложение не сформулировано чётко. Без этого маркетинг и продажи работают вполсилы.');
+        if (form.readyToInvest === 'not_yet') redFlags.push('Без готовности инвестировать время и ресурсы результаты появятся значительно позже ожиданий.');
+        if (form.timeline === 'weeks') redFlags.push('Ожидание результатов через 2–4 недели нереалистично для системных изменений. Стоит скорректировать горизонт планирования.');
+
+        // Quick wins
+        const quickWins = [];
+        if (goalsLabels.includes('Найти новых клиентов')) quickWins.push('Выбрать 1 канал привлечения и довести до 10 тестовых касаний с потенциальными клиентами на этой неделе.');
+        if (goalsLabels.includes('Увеличить выручку')) quickWins.push(`Проанализировать базу текущих клиентов: кому можно предложить доп. услугу или повторную продажу прямо сейчас.`);
+        if (form.teamSize === 'solo') quickWins.push('Выписать 3 задачи, которые занимают больше всего времени — они первые кандидаты на делегирование или автоматизацию.');
+        quickWins.push('Зафиксировать точные цифры: выручка, кол-во клиентов, средний чек за последние 3 месяца — это база для любых решений.');
+        if (!form.uniqueValue || form.uniqueValue.trim().length < 20) quickWins.push('Написать 1 предложение: "Мы помогаем [кому] решить [какую проблему] с помощью [что делаем]" — и проверить на 3 клиентах.');
+
+        // Главная рекомендация
+        let mainRecommendation = '';
+        if (form.revenueGrowth === 'declining') {
+          mainRecommendation = `${form.firstName}, при снижении выручки главное — не паниковать и не запускать много изменений одновременно. Начните с одного: поговорите с 5 последними клиентами, которые ушли или не купили. Их ответы дадут больше, чем любой анализ.`;
+        } else if (form.revenueGrowth === 'flat') {
+          mainRecommendation = `${form.firstName}, стагнация — это не кризис, это сигнал. Ваш продукт работает, но текущий рынок или канал уже не растёт. Один конкретный шаг: выберите одну новую аудиторию или один новый канал и дайте ему 30 дней честного теста.`;
+        } else {
+          mainRecommendation = `${form.firstName}, рост — лучшее время для системности. Пока всё работает, выстройте фундамент: зафиксируйте процессы, которые дают результат, и делегируйте то, что вас отвлекает. Это позволит расти без потери качества.`;
+        }
+
+        return { segment, segmentDescription: `${segment} — один из самых активных сегментов рынка ${form.geography || 'региона'}. Ключевые факторы успеха: качество продукта, скорость обслуживания и доверие клиентов. При выручке ${revenueLabel} и команде ${teamLabel} у вас есть реальная база для следующего шага.`, keyInsights: insights, redFlags, quickWins: quickWins.slice(0, 4), mainRecommendation };
+      };
+
+      const submit = () => {
+        setScreen('analysis');
+        setIsLoading(true);
+        window.scrollTo(0, 0);
+        // Имитация задержки "анализа" для эффекта
+        setTimeout(() => {
+          const result = buildTemplateResult(form);
+          setResult(result);
+          setIsLoading(false);
+        }, 2200);
+      };
+
+      if (screen === 'welcome') {
+        return (
+          <div className="page">
+            <div className="left-panel">
+              <div className="logo">BusinessOS</div>
+              <div className="panel-title">Диагностика бизнеса за 5 минут</div>
+              <div className="panel-subtitle">Заполните один раз — получите персональный план роста и настроенных ИИ-агентов.</div>
+              <div style={{flex:1}} />
+              <div style={{borderTop:'1px solid rgba(255,255,255,0.1)',paddingTop:'24px',fontSize:'13px',color:'rgba(255,255,255,0.3)'}}>
+                Данные используются только для анализа вашего бизнеса
+              </div>
+            </div>
+            <WelcomeScreen onStart={() => setScreen('form')} />
+          </div>
+        );
+      }
+
+      if (screen === 'analysis') {
+        return (
+          <div className="page">
+            <div className="left-panel">
+              <div className="logo">BusinessOS</div>
+              <div className="panel-title">{form.firstName},<br/>анализ готов</div>
+              <div className="panel-subtitle">Ваш профиль передан агентам. Они готовы к работе.</div>
+            </div>
+            <AnalysisScreen form={form} isLoading={isLoading} result={result} />
+          </div>
+        );
+      }
+
+      return (
+        <div className="page">
+          <div className="left-panel">
+            <div className="logo">BusinessOS</div>
+            <div className="steps-nav">
+              {STEPS.map((s, i) => (
+                <div key={s.id}
+                  className={`step-item ${i === step ? 'active' : i < step ? 'done' : ''}`}
+                  onClick={() => i < step && setStep(i)}>
+                  <div className="step-dot">{i < step ? '✓' : i + 1}</div>
+                  <div>
+                    <div className="step-label">{s.label}</div>
+                    <div className="step-desc">{s.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="progress-bar-wrap">
+              <div className="progress-label">
+                <span>Прогресс</span>
+                <span>{Math.round(((step + 1) / STEPS.length) * 100)}%</span>
+              </div>
+              <div className="progress-track">
+                <div className="progress-fill" style={{width:`${((step + 1) / STEPS.length) * 100}%`}} />
+              </div>
+            </div>
+          </div>
+
+          <div className="right-panel">
+            {step === 0 && <Step1 form={form} set={set} errors={errors} />}
+            {step === 1 && <Step2 form={form} set={set} errors={errors} />}
+            {step === 2 && <Step3 form={form} set={set} errors={errors} />}
+            {step === 3 && <Step4 form={form} set={set} errors={errors} />}
+            {step === 4 && <Step5 form={form} set={set} errors={errors} />}
+
+            <div className="nav-row">
+              <button className="btn-back" onClick={() => { setStep(step - 1); window.scrollTo(0,0); }} disabled={step === 0}>
+                ← Назад
+              </button>
+              <button className="btn-next" onClick={next}>
+                {step === STEPS.length - 1 ? 'Получить анализ →' : 'Продолжить →'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>
